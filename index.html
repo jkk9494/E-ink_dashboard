@@ -3,105 +3,249 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Mac-style Dashboard</title>
+    <title>Premium E-ink Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
     <style>
         :root {
-            --bg-color: #ffffff;
-            --text-color: #000000;
-            --border-width: 2.5px;
+            --bg: #ffffff;
+            --fg: #000000;
+            --border: 2.2px;
             --radius: 28px;
         }
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Pretendard', sans-serif; margin: 0; padding: 20px; display: flex; justify-content: center; }
-        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 500px; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .header {
+            width: 100%;
+            max-width: 480px;
+            margin-bottom: 16px;
+            text-align: left;
+            padding-left: 4px;
+        }
+        .header .date-main { 
+            font-size: 3.8rem;
+            font-weight: 900; 
+            line-height: 1; 
+            margin: 0; 
+            letter-spacing: -2px; 
+        }
+        .header .day-sub { 
+            font-size: 1.2rem; 
+            font-weight: 700; 
+            margin: 4px 0 0 0; 
+            opacity: 0.5; 
+            letter-spacing: 1px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .widget {
+            border: var(--border) solid var(--fg);
+            border-radius: var(--radius);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            box-sizing: border-box;
+        }
+
+        .small { aspect-ratio: 1.1 / 1; justify-content: space-between; }
+        .large-sq { grid-column: span 2; aspect-ratio: 1.2 / 1; justify-content: flex-start; }
+        .medium { grid-column: span 2; min-height: 120px; justify-content: space-between; }
+
+        .label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .value { font-size: 1.8rem; font-weight: 900; line-height: 1; margin: 2px 0; }
+        .sub { font-size: 0.85rem; font-weight: 700; margin-top: 4px; }
+
+        .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+        .routine-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        .todo-item { 
+            border: 2px solid var(--fg); 
+            border-radius: 14px; 
+            padding: 8px 10px; 
+            font-size: 0.9rem; 
+            font-weight: 800; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
+
+        .cal-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .cal-day-label { font-size: 0.75rem; font-weight: 900; margin-bottom: 8px; opacity: 0.4; }
+        .cal-date { font-size: 0.95rem; font-weight: 800; height: 32px; display: flex; align-items: center; justify-content: center; }
+        .today { background: var(--fg); color: var(--bg); border-radius: 10px; font-weight: 900; }
+        .birthday-mark { border-bottom: 3px solid var(--fg); font-weight: 900; }
+
+        .refresh-info { margin-top: 20px; font-size: 0.6rem; font-weight: 600; opacity: 0.3; }
         
-        .widget { border: var(--border-width) solid var(--text-color); border-radius: var(--radius); padding: 18px; display: flex; flex-direction: column; justify-content: space-between; background: white; box-sizing: border-box; }
-        .small { aspect-ratio: 1 / 1; }
-        .medium { grid-column: span 2; min-height: 110px; }
-
-        .label { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-        .value { font-size: 2.2rem; font-weight: 900; margin: 0; line-height: 1.1; }
-        .sub-text { font-size: 0.9rem; font-weight: 600; margin-top: 5px; }
-
-        /* 할 일 목록 (Morning Routine) */
-        .todo-list { list-style: none; padding: 0; margin: 10px 0 0 0; }
-        .todo-item { font-size: 1.1rem; margin-bottom: 6px; font-weight: 700; display: flex; align-items: center; }
-        .todo-item::before { content: ""; display: inline-block; width: 14px; height: 14px; border: 1.5px solid black; border-radius: 4px; margin-right: 10px; }
-
-        /* 달력 위젯 */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; font-size: 0.75rem; margin-top: 10px; font-weight: 700; }
-        .today { background-color: black; color: white; border-radius: 4px; }
-        .special-day { text-decoration: underline; font-weight: 900; } /* 생일 등 표시 */
+        /* 명언 텍스트 스타일 */
+        #quote-text {
+            font-size: 0.9rem;
+            font-weight: 800;
+            line-height: 1.4;
+            word-break: keep-all;
+        }
     </style>
 </head>
 <body>
 
+    <div class="header">
+        <p class="day-sub" id="day-of-week">TUESDAY</p>
+        <h1 class="date-main" id="date-main">03.31</h1>
+    </div>
+
     <div class="container">
+        <!-- 1. 상단 소형 위젯들 -->
         <div class="widget small">
-            <div>
-                <div class="label">Exam D-Day</div>
-                <div class="value" id="exam-dday">D-?</div>
+            <div class="label">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/><circle cx="12" cy="12" r="4"/></svg>
+                Weather
             </div>
-            <div class="sub-text">정보기처리기사</div>
+            <div class="value">17°</div>
+            <div class="sub">서울 · 맑음</div>
         </div>
 
         <div class="widget small">
-            <div>
-                <div class="label">Birthday</div>
-                <div class="value" style="font-size: 1.8rem;">04.29</div>
+            <div class="label">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                Exam
             </div>
-            <div class="sub-text">🎉 뚜기 생일</div>
+            <div class="value" id="exam-dday">D-18</div>
+            <div class="sub">정보처리기사</div>
         </div>
 
-        <div class="widget medium">
-            <div class="label">Morning Routine</div>
-            <div class="todo-list">
-                <div class="todo-item">글씨연습</div>
-                <div class="todo-item">영어공부</div>
-                <div class="todo-item">시험공부</div>
-                <div class="todo-item">커피내리기</div>
+        <div class="widget small">
+            <div class="label">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"/></circle></svg>
+                Birthday
+            </div>
+            <div class="value">04.29</div>
+            <div class="sub">🎂 뚜기 생일</div>
+        </div>
+
+        <div class="widget small">
+            <div class="label">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/></svg>
+                Quote
+            </div>
+            <div id="quote-text">
+                로딩 중...
             </div>
         </div>
 
+        <!-- 2. 모닝 루틴 -->
         <div class="widget medium">
-            <div class="label" id="month-label">Month</div>
-            <div class="calendar-grid" id="calendar"></div>
+            <div class="label">
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                Morning Routine
+            </div>
+            <div class="routine-grid">
+                <div class="todo-item">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    글씨연습
+                </div>
+                <div class="todo-item">
+                    <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                    영어공부
+                </div>
+                <div class="todo-item">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    시험공부
+                </div>
+                <div class="todo-item">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+                    커피내리기
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 최하단 대형 캘린더 -->
+        <div class="widget large-sq">
+            <div class="label">
+                <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Calendar
+            </div>
+            <div class="cal-container">
+                <div class="cal-grid" id="calendar"></div>
+            </div>
         </div>
     </div>
+
+    <div class="refresh-info">Auto-refresh every 30m for E-ink clarity</div>
 
     <script>
         const now = new Date();
         
-        // 1. 정처기 시험 D-Day 계산 (4월 18일)
-        const examDate = new Date(now.getFullYear(), 3, 18); // 월은 0부터 시작하므로 3이 4월
-        const diff = examDate - now;
-        const dDay = Math.ceil(diff / (1000 * 60 * 60 * 24));
-        document.getElementById('exam-dday').innerText = dDay > 0 ? `D-${dDay}` : (dDay === 0 ? "D-Day" : `D+${Math.abs(dDay)}`);
+        // 1. 헤더 날짜 업데이트
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        document.getElementById('date-main').innerText = `${mm}.${dd}`;
+        document.getElementById('day-of-week').innerText = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
 
-        // 2. 달력 생성
-        document.getElementById('month-label').innerText = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        const daysContainer = document.getElementById('calendar');
+        // 2. 정처기 D-Day
+        const examDate = new Date(now.getFullYear(), 3, 18);
+        const dDay = Math.ceil((examDate - now) / (1000 * 60 * 60 * 24));
+        document.getElementById('exam-dday').innerText = dDay === 0 ? "D-Day" : `D-${dDay}`;
+
+        // 3. 매일 바뀌는 명언 시스템
+        const quotes = [
+            "오늘 할 수 있는 일에 전력을 다하라.",
+            "천천히 가는 것을 두려워 말고, 중도에 그만두는 것을 두려워하라.",
+            "성공은 매일 반복되는 작은 노력들의 합이다.",
+            "가장 어두운 밤도 결국 끝날 것이며 해는 떠오를 것이다.",
+            "미래를 예측하는 가장 좋은 방법은 미래를 창조하는 것이다.",
+            "자신을 믿어라. 당신은 생각보다 더 강하다.",
+            "기회는 준비된 자에게만 찾아온다.",
+            "어제보다 나은 오늘을 만드는 데 집중하라.",
+            "실패는 성공으로 가는 과정일 뿐이다.",
+            "지금 이 순간이 당신의 인생을 결정한다."
+        ];
+        // 날짜를 기준으로 인덱스 결정 (매일 바뀜)
+        const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+        const quoteIndex = dayOfYear % quotes.length;
+        document.getElementById('quote-text').innerText = quotes[quoteIndex];
+
+        // 4. 캘린더 생성
+        const calContainer = document.getElementById('calendar');
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
         const lastDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
         
         const dayNames = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         dayNames.forEach(d => {
-            const el = document.createElement('div'); el.innerText = d;
-            daysContainer.appendChild(el);
+            const el = document.createElement('div');
+            el.className = 'cal-date cal-day-label'; el.innerText = d;
+            calContainer.appendChild(el);
         });
 
-        for (let i = 0; i < firstDay; i++) daysContainer.appendChild(document.createElement('div'));
+        for (let i = 0; i < firstDay; i++) calContainer.appendChild(document.createElement('div'));
 
         for (let i = 1; i <= lastDate; i++) {
             const el = document.createElement('div');
+            el.className = 'cal-date';
             el.innerText = i;
-            if (i === now.getDate()) el.className = 'today';
-            // 4월 29일 뚜기 생일 표시 (이번 달이 4월일 때만)
-            if (now.getMonth() === 3 && i === 29) el.style.borderBottom = "2px solid black"; 
-            daysContainer.appendChild(el);
+            if (i === now.getDate()) el.classList.add('today');
+            if (now.getMonth() === 3 && i === 29) el.classList.add('birthday-mark');
+            calContainer.appendChild(el);
         }
 
-        // 30분마다 새로고침
         setTimeout(() => { location.reload(); }, 1800000);
     </script>
 </body>

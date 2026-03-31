@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
         user: process.env.DB_USER,
         password: process.env.DB_PASS,
         port: process.env.DB_PORT,
-        ssl: { rejectUnauthorized: false } // 클라우드 DB 필수 옵션
+        ssl: false
     });
 
     try {

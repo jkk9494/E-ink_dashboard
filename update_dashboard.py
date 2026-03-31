@@ -1,8 +1,10 @@
 import psycopg2
 import os
+import json
 from datetime import datetime
 
 def fetch_db_data():
+    # DB 연결
     conn = psycopg2.connect(
         host=os.getenv('DB_HOST'),
         database=os.getenv('DB_NAME'),
@@ -12,17 +14,17 @@ def fetch_db_data():
     )
     cur = conn.cursor()
 
-    # D-Day (시험)
+    # 1. D-Day (시험) 가져오기
     cur.execute("SELECT title, target_date FROM d_days WHERE category='EXAM' ORDER BY target_date ASC LIMIT 1")
-    exam = cur.fetchone() or ("일정 없음", datetime.now())
+    exam = cur.fetchone() or ("일정 없음", datetime.now().date())
     exam_val = f"D-{(exam[1] - datetime.now().date()).days}"
 
-    # D-Day (생일)
+    # 2. D-Day (생일) 가져오기
     cur.execute("SELECT title, target_date FROM d_days WHERE category='BIRTHDAY' ORDER BY target_date ASC LIMIT 1")
-    bday = cur.fetchone() or ("생일 없음", datetime.now())
+    bday = cur.fetchone() or ("생일 없음", datetime.now().date())
     bday_val = bday[1].strftime('%m.%d')
 
-    # 오늘 루틴 리스트
+    # 3. 오늘 루틴 리스트 가져오기
     cur.execute("""
         SELECT m.task_name, COALESCE(l.is_completed, FALSE)
         FROM routine_master m
@@ -30,9 +32,13 @@ def fetch_db_data():
         ORDER BY m.display_order
     """)
     routines = cur.fetchall()
-    routine_html = "".join([f'<div class="todo-item {"done" if r[1] else ""}">{r[0]}</div>' for r in routines])
+    # HTML 조각 생성 (아이콘은 일단 기본 펜 아이콘으로 통일)
+    routine_html = ""
+    for r in routines:
+        done_class = "done" if r[1] else ""
+        routine_html += f'<div class="todo-item {done_class}"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>{r[0]}</div>'
 
-    # 캘린더 점 찍을 날짜 리스트
+    # 4. 캘린더 점 찍을 날짜 리스트 가져오기
     cur.execute("SELECT DISTINCT completed_date FROM routine_logs WHERE is_completed = TRUE")
     completed_dates = [d[0].strftime('%Y-%m-%d') for d in cur.fetchall()]
 
@@ -41,16 +47,14 @@ def fetch_db_data():
     return exam, exam_val, bday, bday_val, routine_html, completed_dates
 
 def main():
-    # 데이터 가져오기
+    # 데이터 호출
     exam, exam_val, bday, bday_val, routine_html, completed_dates = fetch_db_data()
     
-    # 1. index.html 읽기
+    # index.html 읽기
     with open('index.html', 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # 2. 데이터 치환 (중요: 문자열로 명확히 변환)
-    # 리스트가 비어있어도 [] 가 들어가도록 json.dumps 사용 추천
-    import json
+    # 데이터 주입 (JSON 형식으로 안전하게)
     completed_dates_json = json.dumps(completed_dates)
 
     content = content.replace('{{D_DAY_TITLE}}', str(exam[0]))
@@ -58,11 +62,9 @@ def main():
     content = content.replace('{{BDAY_TITLE}}', str(bday[0]))
     content = content.replace('{{BDAY_VAL}}', str(bday_val))
     content = content.replace('{{ROUTINE_LIST}}', routine_html)
-    
-    # JS 에러 방지를 위해 이 부분을 확실히 치환
     content = content.replace('{{COMPLETED_DATES}}', completed_dates_json)
 
-    # 3. 수정된 내용을 다시 저장
+    # 수정된 내용 저장
     with open('index.html', 'w', encoding='utf-8') as f:
         f.write(content)
 

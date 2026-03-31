@@ -2,7 +2,7 @@ import psycopg2
 import os
 from datetime import datetime
 
-def fetch_data():
+def fetch_db_data():
     conn = psycopg2.connect(
         host=os.getenv('DB_HOST'),
         database=os.getenv('DB_NAME'),
@@ -12,11 +12,17 @@ def fetch_data():
     )
     cur = conn.cursor()
 
-    # 1. D-Day 가져오기 (가장 가까운 2개)
-    cur.execute("SELECT title, target_date FROM d_days WHERE is_active = TRUE ORDER BY target_date ASC LIMIT 2")
-    d_days = cur.fetchall()
+    # D-Day (시험)
+    cur.execute("SELECT title, target_date FROM d_days WHERE category='EXAM' ORDER BY target_date ASC LIMIT 1")
+    exam = cur.fetchone() or ("일정 없음", datetime.now())
+    exam_val = f"D-{(exam[1] - datetime.now().date()).days}"
 
-    # 2. 오늘 루틴 상태 가져오기
+    # D-Day (생일)
+    cur.execute("SELECT title, target_date FROM d_days WHERE category='BIRTHDAY' ORDER BY target_date ASC LIMIT 1")
+    bday = cur.fetchone() or ("생일 없음", datetime.now())
+    bday_val = bday[1].strftime('%m.%d')
+
+    # 오늘 루틴 리스트
     cur.execute("""
         SELECT m.task_name, COALESCE(l.is_completed, FALSE)
         FROM routine_master m
@@ -24,42 +30,32 @@ def fetch_data():
         ORDER BY m.display_order
     """)
     routines = cur.fetchall()
+    routine_html = "".join([f'<div class="todo-item {"done" if r[1] else ""}">{r[0]}</div>' for r in routines])
 
-    # 3. 이번 달 달성 기록 (캘린더 점 표시용)
-    cur.execute("""
-        SELECT DISTINCT completed_date FROM routine_logs 
-        WHERE is_completed = TRUE 
-        AND date_trunc('month', completed_date) = date_trunc('month', CURRENT_DATE)
-    """)
+    # 캘린더 점 찍을 날짜 리스트
+    cur.execute("SELECT DISTINCT completed_date FROM routine_logs WHERE is_completed = TRUE")
     completed_dates = [d[0].strftime('%Y-%m-%d') for d in cur.fetchall()]
 
     cur.close()
     conn.close()
-    return d_days, routines, completed_dates
+    return exam, exam_val, bday, bday_val, routine_html, completed_dates
 
-def update_html(d_days, routines, completed_dates):
-    with open('index.html', 'r', encoding='utf-8') as f:
-        html = f.read()
-
-    # 데이터 주입 (간단한 문자열 치환 방식)
-    # D-Day 예시 (첫 번째 위젯)
-    if len(d_days) > 0:
-        html = html.replace('{{D_DAY_TITLE_1}}', d_days[0][0])
-        html = html.replace('{{D_DAY_DATE_1}}', d_days[0][1].strftime('%m.%d'))
+def main():
+    exam, exam_val, bday, bday_val, routine_html, completed_dates = fetch_db_data()
     
-    # 루틴 리스트 생성 (HTML 조각 생성)
-    routine_html = ""
-    for name, is_done in routines:
-        done_class = "done" if is_done else ""
-        routine_html += f'<div class="todo-item {done_class}">{name}</div>'
-    html = html.replace('{{ROUTINE_LIST}}', routine_html)
+    with open('index.html', 'r', encoding='utf-8') as f:
+        content = f.read()
 
-    # 캘린더 기록 데이터 주입 (JS 변수로 전달)
-    html = html.replace('{{COMPLETED_DATES}}', str(completed_dates))
+    # 자리표시자 치환
+    content = content.replace('{{D_DAY_TITLE}}', exam[0])
+    content = content.replace('{{D_DAY_VAL}}', exam_val)
+    content = content.replace('{{BDAY_TITLE}}', bday[0])
+    content = content.replace('{{BDAY_VAL}}', bday_val)
+    content = content.replace('{{ROUTINE_LIST}}', routine_html)
+    content = content.replace('{{COMPLETED_DATES}}', str(completed_dates))
 
     with open('index.html', 'w', encoding='utf-8') as f:
-        f.write(html)
+        f.write(content)
 
 if __name__ == "__main__":
-    d_days, routines, completed_dates = fetch_data()
-    update_html(d_days, routines, completed_dates)
+    main()

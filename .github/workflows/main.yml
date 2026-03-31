@@ -28,10 +28,15 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
           DB_PORT: ${{ secrets.DB_PORT }}
-        run: python update_dashboard.py # 여기서 데이터가 index.html에 박힘
-        
+        run: python update_dashboard.py
+
+      # 파일이 잘 바뀌었는지 로그로 확인 (디버깅용)
+      - name: Check if file changed
+        run: grep "completedDates =" index.html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./ # 현재 폴더 전체를 gh-pages 브랜치로 배포
+          publish_dir: ./  # 현재 경로(수정된 index.html이 있는 곳)를 배포
+          force_orphan: true # 이전 배포 기록을 무시하고 현재 상태를 강제로 올림

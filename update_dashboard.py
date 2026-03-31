@@ -41,19 +41,28 @@ def fetch_db_data():
     return exam, exam_val, bday, bday_val, routine_html, completed_dates
 
 def main():
+    # 데이터 가져오기
     exam, exam_val, bday, bday_val, routine_html, completed_dates = fetch_db_data()
     
+    # 1. index.html 읽기
     with open('index.html', 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # 자리표시자 치환
-    content = content.replace('{{D_DAY_TITLE}}', exam[0])
-    content = content.replace('{{D_DAY_VAL}}', exam_val)
-    content = content.replace('{{BDAY_TITLE}}', bday[0])
-    content = content.replace('{{BDAY_VAL}}', bday_val)
-    content = content.replace('{{ROUTINE_LIST}}', routine_html)
-    content = content.replace('{{COMPLETED_DATES}}', str(completed_dates))
+    # 2. 데이터 치환 (중요: 문자열로 명확히 변환)
+    # 리스트가 비어있어도 [] 가 들어가도록 json.dumps 사용 추천
+    import json
+    completed_dates_json = json.dumps(completed_dates)
 
+    content = content.replace('{{D_DAY_TITLE}}', str(exam[0]))
+    content = content.replace('{{D_DAY_VAL}}', str(exam_val))
+    content = content.replace('{{BDAY_TITLE}}', str(bday[0]))
+    content = content.replace('{{BDAY_VAL}}', str(bday_val))
+    content = content.replace('{{ROUTINE_LIST}}', routine_html)
+    
+    # JS 에러 방지를 위해 이 부분을 확실히 치환
+    content = content.replace('{{COMPLETED_DATES}}', completed_dates_json)
+
+    # 3. 수정된 내용을 다시 저장
     with open('index.html', 'w', encoding='utf-8') as f:
         f.write(content)
 

@@ -1,28 +1,37 @@
 name: Dashboard Sync
+
 on:
   schedule:
-    - cron: '0 * * * *' # 매시간 정각 자동 갱신
+    - cron: '0 * * * *' # 매시간 정각 실행
   push:
-    branches: [ main ]
+    branches: [ main ] # 메인 브랜치에 푸시될 때 실행
+  workflow_dispatch: # 수동으로 실행 버튼 누르고 싶을 때 대비
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - run: pip install psycopg2-binary
-      - name: Run Update
+          
+      - name: Install dependencies
+        run: pip install psycopg2-binary
+        
+      - name: Run Dashboard Update
         env:
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
           DB_PORT: ${{ secrets.DB_PORT }}
-        run: python update_dashboard.py
-      - name: Deploy to Pages
+        run: python update_dashboard.py # 여기서 데이터가 index.html에 박힘
+        
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
+          publish_dir: ./ # 현재 폴더 전체를 gh-pages 브랜치로 배포

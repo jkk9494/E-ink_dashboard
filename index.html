@@ -20,8 +20,10 @@
         .sub { font-size: 0.85rem; font-weight: 700; margin-top: 4px; }
         .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
         .routine-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-        .todo-item { border: 2px solid var(--fg); border-radius: 14px; padding: 8px 10px; font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        /* 터치하기 좋게 cursor 추가, 하이라이트 제거 */
+        .todo-item { border: 2px solid var(--fg); border-radius: 14px; padding: 8px 10px; font-size: 0.9rem; font-weight: 800; display: flex; align-items: center; gap: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .todo-item.done { background-color: var(--fg); color: var(--bg); }
+        .todo-item.done .icon { stroke: var(--bg); }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; margin-top: 10px; }
         .cal-date { font-size: 0.95rem; font-weight: 800; height: 38px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         .today { background: var(--fg); color: var(--bg); border-radius: 10px; }
@@ -53,7 +55,7 @@
         </div>
         <div class="widget medium">
             <div class="label">Morning Routine</div>
-            <div class="routine-grid">{{ROUTINE_LIST}}</div>
+            <div class="routine-grid" id="routine-list">{{ROUTINE_LIST}}</div>
         </div>
         <div class="widget large-sq">
             <div class="label">Calendar</div>
@@ -63,8 +65,10 @@
     <script>
         const now = new Date();
         document.getElementById('date-full').innerText = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${now.toLocaleDateString('ko-KR',{weekday:'long'})}`;
+        
         const quotes = ["오늘 할 수 있는 일에 전력을 다하라.", "성공은 매일 반복되는 작은 노력들의 합이다.", "기회는 준비된 자에게만 찾아온다."];
         document.getElementById('quote-text').innerText = quotes[Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000) % quotes.length];
+        
         async function fetchWeather() {
             try {
                 const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current_weather=true&timezone=Asia%2FSeoul');
@@ -74,6 +78,8 @@
             } catch (e) { document.getElementById('weather-temp').innerText = "Err"; }
         }
         fetchWeather();
+        
+        // 캘린더 생성
         const completedDates = {{COMPLETED_DATES}}; 
         const calContainer = document.getElementById('calendar');
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
@@ -88,6 +94,42 @@
             if(completedDates.includes(fullDate)) el.innerHTML += `<span class="dot">.</span>`;
             calContainer.appendChild(el);
         }
+
+        // --- 여기서부터 새로 추가된 모닝루틴 터치 이벤트 로직 --- //
+        const currentYear = now.getFullYear();
+        const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const currentDate = String(now.getDate()).padStart(2, '0');
+        const fullDateStr = `${currentYear}-${currentMonth}-${currentDate}`; // YYYY-MM-DD 포맷
+
+        // 1초 뒤에 실행되도록 지연 (파이썬이 HTML을 다 렌더링한 후 이벤트를 붙이기 위함)
+        setTimeout(() => {
+            document.querySelectorAll('.todo-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    // 1. 화면 색상 바로 뒤집기 (반응성)
+                    const isDone = item.classList.toggle('done');
+                    const routineId = item.getAttribute('data-id');
+
+                    // 2. Vercel 서버로 전송
+                    // 🚨 중요: 아래 URL을 형이 Vercel에서 발급받은 진짜 주소로 무조건 바꿔야 해! 🚨
+                    const VERCEL_API_URL = 'https://e-ink-dashboard-jv5ma1byf-jkk9494.vercel.app/api/routine';
+
+                    fetch(VERCEL_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            routine_id: parseInt(routineId),
+                            date: fullDateStr,
+                            is_completed: isDone
+                        })
+                    })
+                    .then(res => res.json())
+                    .then(data => console.log('DB 전송 완료:', data))
+                    .catch(err => console.error('전송 실패:', err));
+                });
+            });
+        }, 500);
+
+        // 30분마다 자동 새로고침
         setTimeout(() => location.reload(), 1800000);
     </script>
 </body>

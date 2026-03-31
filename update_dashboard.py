@@ -24,19 +24,21 @@ def fetch_db_data():
     bday = cur.fetchone() or ("생일 없음", datetime.now().date())
     bday_val = bday[1].strftime('%m.%d')
 
-    # 3. 오늘 루틴 리스트 가져오기
+    # 3. 오늘 루틴 리스트 가져오기 (m.id 추가됨)
     cur.execute("""
-        SELECT m.task_name, COALESCE(l.is_completed, FALSE)
+        SELECT m.id, m.task_name, COALESCE(l.is_completed, FALSE)
         FROM routine_master m
         LEFT JOIN routine_logs l ON m.id = l.routine_id AND l.completed_date = CURRENT_DATE
         ORDER BY m.display_order
     """)
     routines = cur.fetchall()
-    # HTML 조각 생성 (아이콘은 일단 기본 펜 아이콘으로 통일)
+    
+    # HTML 조각 생성 (r[0]=id, r[1]=name, r[2]=is_completed 로 인덱스 변경됨)
     routine_html = ""
     for r in routines:
-        done_class = "done" if r[1] else ""
-        routine_html += f'<div class="todo-item {done_class}"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>{r[0]}</div>'
+        done_class = "done" if r[2] else ""
+        # data-id 속성에 실제 DB의 id값을 넣음
+        routine_html += f'<div class="todo-item {done_class}" data-id="{r[0]}"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>{r[1]}</div>'
 
     # 4. 캘린더 점 찍을 날짜 리스트 가져오기
     cur.execute("SELECT DISTINCT completed_date FROM routine_logs WHERE is_completed = TRUE")

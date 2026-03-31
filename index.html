@@ -25,26 +25,20 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* 날짜 헤더 높이 축소 및 형식 변경 */
         .header {
             width: 100%;
-            max-width: 480px;
-            margin-bottom: 16px;
+            max-width: 500px; /* 양쪽 10px씩 추가 (480 -> 500) */
+            margin-bottom: 12px; /* 높이 줄임 */
             text-align: left;
             padding-left: 4px;
         }
-        .header .date-main { 
-            font-size: 3.8rem;
+        .header .date-full { 
+            font-size: 2.2rem; /* 폰트 크기 조정 */
             font-weight: 900; 
-            line-height: 1; 
+            line-height: 1.2; 
             margin: 0; 
-            letter-spacing: -2px; 
-        }
-        .header .day-sub { 
-            font-size: 1.2rem; 
-            font-weight: 700; 
-            margin: 4px 0 0 0; 
-            opacity: 0.5; 
-            letter-spacing: 1px;
+            letter-spacing: -1.5px; 
         }
 
         .container {
@@ -52,7 +46,7 @@
             grid-template-columns: 1fr 1fr;
             gap: 12px;
             width: 100%;
-            max-width: 480px;
+            max-width: 500px; /* 양쪽 10px씩 추가 */
         }
 
         .widget {
@@ -96,7 +90,6 @@
 
         .refresh-info { margin-top: 20px; font-size: 0.6rem; font-weight: 600; opacity: 0.3; }
         
-        /* 명언 텍스트 스타일 */
         #quote-text {
             font-size: 0.9rem;
             font-weight: 800;
@@ -108,8 +101,7 @@
 <body>
 
     <div class="header">
-        <p class="day-sub" id="day-of-week">TUESDAY</p>
-        <h1 class="date-main" id="date-main">03.31</h1>
+        <h1 class="date-full" id="date-full">2026년 3월 31일 화요일</h1>
     </div>
 
     <div class="container">
@@ -194,11 +186,12 @@
     <script>
         const now = new Date();
         
-        // 1. 헤더 날짜 업데이트
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        document.getElementById('date-main').innerText = `${mm}.${dd}`;
-        document.getElementById('day-of-week').innerText = now.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+        // 1. 헤더 날짜 업데이트 (년월일 요일 형식)
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const date = now.getDate();
+        const dayOfWeek = now.toLocaleDateString('ko-KR', { weekday: 'long' });
+        document.getElementById('date-full').innerText = `${year}년 ${month}월 ${date}일 ${dayOfWeek}`;
 
         // 2. 정처기 D-Day
         const examDate = new Date(now.getFullYear(), 3, 18);
@@ -218,7 +211,6 @@
             "실패는 성공으로 가는 과정일 뿐이다.",
             "지금 이 순간이 당신의 인생을 결정한다."
         ];
-        // 날짜를 기준으로 인덱스 결정 (매일 바뀜)
         const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
         const quoteIndex = dayOfYear % quotes.length;
         document.getElementById('quote-text').innerText = quotes[quoteIndex];
